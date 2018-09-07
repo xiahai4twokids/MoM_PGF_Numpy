@@ -102,7 +102,7 @@ class FillingMatrix_dgf_free(object):
         pass
     
     def changeIncDir(self,incPar):
-        tempIncPar = IncidentPar()
+        tempIncPar = incPar
         self.planewave = IncidentFunc(self.k, tempIncPar.k_direct, tempIncPar.e_direct).planewave        
 
     def coef_equations(self):
@@ -781,7 +781,6 @@ class FillingProcess_DGF_Free(object):
             # 设置高斯积分
             quadRule = QuadRule()
             b_101 = quadRule.b_101
-            b_21 = quadRule.b_21
             b_31 = quadRule.b_31
             b_41 = quadRule.b_41
             filling_method4near_with_sig = quadRule.filling_method4near_with_sig
@@ -807,11 +806,25 @@ class FillingProcess_DGF_Free(object):
             impMatrix = map(self.fillingProcess_kernel, myVars)
             
             # 填充右端激励项
-            rhdTerm = filling.fillRHD(xrange(len(trias)), b_21, rwgs) 
+            rhdTerm = [len(rwgs[1]),len(rwgs[1])]
             return [[impMatrix,rhdTerm,filling.coef_equations()],filling]
         except AssertionError as aes:
             print aes
             raise
+            
+    def fillingRHD_dgf_free(self, trias,rwgs, filling):
+        try:
+            # 设置高斯积分
+            quadRule = QuadRule()
+            b_21 = quadRule.b_21
+            
+#            filling =  FillingMatrix_dgf_free(GreenFunc(k),grids,trias)
+            # 填充右端激励项
+            rhdTerm = filling.fillRHD(xrange(len(trias)), b_21, rwgs) 
+            return rhdTerm
+        except AssertionError as aes:
+            print aes
+            raise    
 
 
 # In[]

@@ -11,6 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 import pandas as pds
+import itertools
 
 # defined packages
 from _domain_utils import autoDecomDomain, optDecomDomain,optDecomDomain_check
@@ -21,7 +22,7 @@ from Components import Solver,getFarFiled
 from Components import RWGFunc
 
 # In[] Some common parameters
-from Parameters import Filename,DomainSeg,SolverPar,RCSPar_theta, RCSPar_phi, WorkingFreqPar, IncidentPar
+from Parameters import Filename,DomainSeg,SolverPar,RCSPar_theta, WorkingFreqPar, IncidentPar
 
 # In[]
 def plotGeo(grids,trias):
@@ -251,18 +252,11 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
         filling_cpu_start = time.clock()
         print 'filling start @ ', filling_start
         try:
-            matrix_all_in, filling_hander = FillingProcess_DGF_Free().fillingProcess_dgf_free(\
+            fillingProcess = FillingProcess_DGF_Free()
+            matrix_all_in, filling_hander = fillingProcess.fillingProcess_dgf_free(\
                                                                    k,grids,trias,rwgs,domains,gridinDomain,triasinDomain\
                                                                    )
-        except Exception as e:
-            print e
-            print "=*="*30
-            raise
-        try:
-            incPar = IncidentPar()
-            incPar.k_direct = np.array([0,0,1])
-            filling_hander.changeIncDir(incPar)
-            matrix = LinearOperator((len(matrix_all_in[1]),len(matrix_all_in[1])),
+            matrix = LinearOperator((matrix_all_in[1][0],matrix_all_in[1][1]),
                                         ImpMatrix2(matrix_all_in).matVec,ImpMatrix2(matrix_all_in).rmatVec)
         except Exception as e:
             print e
@@ -282,77 +276,114 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
     except AssertionError as ae:
         print ae
         raise   
-        
+    
+    # 定义一个内部函数，用来做循环
+    class solving_kernel(object):
+        def __init__(self,k_dirs,h_dirs):
+            self.k_dirs = k_dirs
+            self.e_dirs = e_dirs
+            details['rhd'] = dict()
+            details['current'] = dict()
+            details['f_e']=dict()
+            details['f_h']=dict()
+            pass
+        def solve(self, ind_inc_i_j):     
+            print ind_inc_i_j
+            try:    
+                incPar = IncidentPar()
+                incPar.k_direct = self.k_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])# 
+                incPar.e_direct = self.e_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])#
+                filling_hander.changeIncDir(incPar)
+                print incPar.k_direct
+                print incPar.e_direct
+                rhdTerm = fillingProcess.fillingRHD_dgf_free(trias,rwgs,filling_hander) 
+            except Exception as e:
+                print e
+                raise
+
+            try:
+                result1 = Solver().cgsSolve(matrix, rhdTerm) 
+                assert  result1[1] == 0
+                I_current = result1[0].reshape([-1,1])
+            except Exception as e:
+                print e
+                raise 
+                
+            details['rhd']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])] = rhdTerm
+            details['current']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])] = I_current
+            
+            try:           
+                tempRCSPar = RCSPar_theta()
+                incPar = IncidentPar()
+                r = tempRCSPar.r
+                r_obs = incPar.k_direct*r
+                r_obs = np.array(r_obs).reshape([1,1,-1])
+                field_obs = getFarFiled(r_obs, I_current, filling_hander, trias, rwgs)                
+            except Exception as e:
+                print e
+                raise                            
+            try:        
+                #1
+                field_e = np.multiply(field_obs,incPar.e_direct)
+                field_e = np.sum(field_e, axis=2)
+                field_e = np.multiply(field_e,np.conj(field_e))
+                aug = np.abs(field_e)*r**2*4*np.pi
+#                aug = np.log10(aug)*10           
+            except Exception as e:
+                print e
+                raise              
+            details['f_e']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])] = aug  
+                   
+            try:        
+                #1
+                field_h = np.multiply(field_obs,np.cross(incPar.k_direct,incPar.e_direct))
+                field_h = np.sum(field_h, axis=2)
+                field_h = np.multiply(field_h,np.conj(field_h))
+                aug = np.abs(field_h)*r**2*4*np.pi
+#                aug = np.log10(aug)*10        
+            except Exception as e:
+                print e
+                raise                 
+            details['f_h']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])]= aug
+            pass
+ 
+    print "solving equation"
+    solving_start = datetime.datetime.now()
+    solving_cpu_start = time.clock()
+    print 'solving start @ ', solving_start     
+    
     try:
-        print "solving equation"
-        solving_start = datetime.datetime.now()
-        solving_cpu_start = time.clock()
-        print 'solving start @ ', solving_start
-        result1 = Solver().cgsSolve(matrix, matrix_all_in[1]) 
-        solving_end = datetime.datetime.now()
-        solving_cpu_end = time.clock()
-        details['solveingtime'] = (solving_end-solving_start).seconds
-        details['solveingcputime'] = solving_cpu_end-solving_cpu_start
-        details['rhd'] = matrix_all_in[1]
-
-        print 'solving end @ ', solving_end
-        print 'solving time =  %.2e s = %.2e m'%(details['solveingtime'], details['solveingtime']/60.)
-        print "cpu time = %.2e s = %.2e m"%(details['solveingcputime'], details['solveingcputime']/60.)
-
-        assert  result1[1] == 0
-        I_current = result1[0].reshape([-1,1])
-        details['current'] = I_current
-        print "--"*90
+        RCS_plane = RCSPar_theta()
+        thetas = RCS_plane.theta_0.reshape([-1,1])#np.array([np.pi/2,]).reshape([-1,1])
+        phis = RCS_plane.phi_0.reshape([1,-1]) #np.linspace(np.pi*0,np.pi*1.,3).reshape([1,-1])
+        k_dirs = np.array([np.sin(thetas)*np.cos(phis),\
+                           np.sin(thetas)*np.sin(phis),\
+                           np.cos(thetas)*np.ones_like(phis)])\
+                                .transpose([1,2,0])
+        # TE 
+        v_dirs = np.array([-np.ones_like(thetas)*np.sin(phis),\
+                           np.ones_like(thetas)*np.cos(phis),\
+                           np.zeros([thetas.shape[0],phis.shape[1]])])\
+                                .transpose([1,2,0])
+        e_dirs = v_dirs
+#        # TM
+#        h_dirs = v_dirs
+#        e_dirs = np.cross(h_dirs,k_dirs)
+        solver = solving_kernel(k_dirs,e_dirs)
+        map(solver.solve,\
+            list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
     except Exception as e:
         print e
         raise
-    except AssertionError as ae:
-        print ae
-        raise
-   
-    try:           
-        tempRCSPar = RCSPar_theta()
-        incPar = IncidentPar()
-        r = tempRCSPar.r
-        r_obs = incPar.k_direct*r
-        r_obs = np.array(r_obs).reshape([1,1,-1])
-#        raise
-        field_obs = getFarFiled(r_obs, I_current, filling_hander, trias, rwgs)
-        print "--"*90
-    except Exception as e:
-        print e
-        print r_obs.shape
-        raise
         
-    try:        
-        #1
-        field_e = np.multiply(field_obs,incPar.e_direct)
-        field_e = np.sum(field_e, axis=2)
-        field_e = np.multiply(field_e,np.conj(field_e))
-        aug = np.abs(field_e)*r**2*4*np.pi
-        aug = np.log10(aug)*10
-        print "theta_comp"
-        details['f_e'] = aug
-
-    except AssertionError as ae:
-        print ae
-        raise     
-
-    try:        
-        #1
-        field_h = np.multiply(field_obs,np.cross(incPar.k_direct,incPar.e_direct))
-        field_h = np.sum(field_h, axis=2)
-        field_h = np.multiply(field_h,np.conj(field_h))
-        aug = np.abs(field_h)*r**2*4*np.pi
-        aug = np.log10(aug)*10
-        print "theta_comp"
-        details['f_h'] = aug
-
-    except AssertionError as ae:
-        print ae
-        raise     
-        
-        
+    solving_end = datetime.datetime.now()
+    solving_cpu_end = time.clock()
+    details['solveingtime'] = (solving_end-solving_start).seconds
+    details['solveingcputime'] = solving_cpu_end-solving_cpu_start
+    print 'solving end @ ', solving_end
+    print 'solving time =  %.2e s = %.2e m'%(details['solveingtime'], details['solveingtime']/60.)
+    print "cpu time = %.2e s = %.2e m"%(details['solveingcputime'], details['solveingcputime']/60.)
+    print "--"*90
 
     return (ID,details)
         
