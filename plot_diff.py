@@ -30,4 +30,45 @@ ID_sim_dir,details_sim_dir = Solution.simulator(filename=Parameters.Filename(nam
 with open('result/%s.txt'%ID_sim_dir,'w') as f:
     print ID_sim_dir
     pickle.dump(details_sim_dir,f)
-    
+
+# In[]
+import matplotlib.pylab as plt
+import numpy as np
+
+rCSPar = Parameters.RCSPar()
+if 'theta'==rCSPar.whichPlan:
+    ## theta-plan
+    plt.figure()
+    plt.plot(details_sim_dir['theta'][:,0],10*np.log10(\
+             details_sim_dir['f_h'][:,0]),label='h')
+    plt.plot(details_sim_dir['theta'][:,0],10*np.log10(\
+             details_sim_dir['f_e'][:,0]),label='e')
+    plt.legend(fontsize=14)
+    plt.xlabel('$\phi$',fontsize=14)
+    plt.ylabel('RCS dBsm',fontsize=14)
+    xlabel = np.linspace(0,np.pi,7)
+    plt.xticks(xlabel,\
+               np.array(xlabel*180/np.pi,dtype=int), \
+               fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid()
+    plt.show()
+else:
+    # phi-plan
+    plt.figure()
+    plt.plot(details_sim_dir['phi'][0,:],10*np.log10(\
+             details_sim_dir['f_h'][0,:]),\
+             label = "h")
+    plt.plot(details_sim_dir['phi'][0,::],10*np.log10(\
+             details_sim_dir['f_e'][0,:]),\
+             label = 'e')
+    plt.legend(fontsize=14)
+    plt.xlabel('$\phi$',fontsize=14)
+    plt.ylabel('RCS dBsm',fontsize=14)
+    xlabel = np.linspace(0,np.pi,7)
+    plt.xticks(xlabel,\
+               np.array(xlabel*180/np.pi,dtype=int), \
+               fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid()
+    plt.show()

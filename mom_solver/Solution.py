@@ -22,7 +22,7 @@ from Components import Solver,getFarFiled
 from Components import RWGFunc
 
 # In[] Some common parameters
-from Parameters import Filename,DomainSeg,SolverPar,RCSPar_theta, WorkingFreqPar, IncidentPar
+from Parameters import Filename,DomainSeg,SolverPar,RCSPar_theta,RCSPar_phi, WorkingFreqPar, IncidentPar, RCSPar
 
 # In[]
 def plotGeo(grids,trias):
@@ -284,18 +284,18 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             self.e_dirs = e_dirs
             details['rhd'] = dict()
             details['current'] = dict()
-            details['f_e']=dict()
-            details['f_h']=dict()
+            details['f_e']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
+            details['f_h']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
             pass
         def solve(self, ind_inc_i_j):     
-            print ind_inc_i_j
+#            print ind_inc_i_j
             try:    
                 incPar = IncidentPar()
                 incPar.k_direct = self.k_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])# 
                 incPar.e_direct = self.e_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])#
                 filling_hander.changeIncDir(incPar)
-                print incPar.k_direct
-                print incPar.e_direct
+#                print incPar.k_direct
+#                print incPar.e_direct
                 rhdTerm = fillingProcess.fillingRHD_dgf_free(trias,rwgs,filling_hander) 
             except Exception as e:
                 print e
@@ -313,7 +313,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             details['current']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])] = I_current
             
             try:           
-                tempRCSPar = RCSPar_theta()
+                tempRCSPar = RCSPar_phi()
                 incPar = IncidentPar()
                 r = tempRCSPar.r
                 r_obs = incPar.k_direct*r
@@ -332,7 +332,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             except Exception as e:
                 print e
                 raise              
-            details['f_e']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])] = aug  
+            details['f_e'][ind_inc_i_j[0],ind_inc_i_j[1]] = aug[0,0]  
                    
             try:        
                 #1
@@ -344,7 +344,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             except Exception as e:
                 print e
                 raise                 
-            details['f_h']["%d_%d"%(ind_inc_i_j[0],ind_inc_i_j[1])]= aug
+            details['f_h'][ind_inc_i_j[0],ind_inc_i_j[1]]= aug[0,0]
             pass
  
     print "solving equation"
@@ -353,7 +353,11 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
     print 'solving start @ ', solving_start     
     
     try:
-        RCS_plane = RCSPar_theta()
+        rCSPar = RCSPar()
+        if 'theta'==rCSPar.whichPlan:
+            RCS_plane = RCSPar_theta()
+        else:
+            RCS_plane = RCSPar_phi()
         thetas = RCS_plane.theta_0.reshape([-1,1])#np.array([np.pi/2,]).reshape([-1,1])
         phis = RCS_plane.phi_0.reshape([1,-1]) #np.linspace(np.pi*0,np.pi*1.,3).reshape([1,-1])
         k_dirs = np.array([np.sin(thetas)*np.cos(phis),\
@@ -380,6 +384,8 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
     solving_cpu_end = time.clock()
     details['solveingtime'] = (solving_end-solving_start).seconds
     details['solveingcputime'] = solving_cpu_end-solving_cpu_start
+    details['theta'] = thetas
+    details['phi'] = phis
     print 'solving end @ ', solving_end
     print 'solving time =  %.2e s = %.2e m'%(details['solveingtime'], details['solveingtime']/60.)
     print "cpu time = %.2e s = %.2e m"%(details['solveingcputime'], details['solveingcputime']/60.)

@@ -24,17 +24,19 @@ class SolverPar(object):
         self.matrix_solver_type = matrix_solver_type
         self.aca_threshold = 1.e-4
         
-
+class RCSPar(object):
+    def __init__(self):
+        self.whichPlan = 'theta'
 class RCSPar_theta(object):
     def __init__(self):
-        self.theta_0 = np.linspace(0,180,181)*np.pi/180.
+        self.theta_0 = np.linspace(0,180,37)*np.pi/180.
         self.phi_0 = np.array([90,])*np.pi/180.
         self.r = 100.
 
 class RCSPar_phi(object):
     def __init__(self):
         self.theta_0 = np.array([90,])*np.pi/180.
-        self.phi_0 = np.linspace(0,180,181)*np.pi/180.
+        self.phi_0 = np.linspace(0,180,37)*np.pi/180.
         self.r = 100.
         
 class WorkingFreqPar(object):
