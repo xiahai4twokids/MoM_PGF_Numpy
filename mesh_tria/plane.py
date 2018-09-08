@@ -70,12 +70,12 @@ def obtainFullTria(x,y):
         print grid4.shape
         raise
 
-a = 2
-b = 2
+a = 0.5
+b = 0.01
 
 # 预定义的格子店
-x = np.linspace(-a,a,20)
-y = np.linspace(-b,b,20)
+x = np.linspace(-a,a,41)
+y = np.linspace(-b,b,2)
 
 myMesh_tria = obtainFullTria(x,y)
 

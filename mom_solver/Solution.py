@@ -134,47 +134,18 @@ def plotDomain(grids,trias):
         raise
                 
 def preCal(wavenumber, grids, trias, edges, segment):              
-    try:     
-        trias__,domainGrid, domainIDs  = autoDecomDomain(grids, trias, segment)
-        
-        if len(optDecomDomain_check(8, grids, trias__,domainGrid, domainIDs)) != 0:
-            optDecomDomain(8, grids, trias__,domainGrid, domainIDs)
-        
-        print "===="*30
-        trias = trias__
-        domains = np.unique(np.array(trias)[:,3])
-        
-        
-        # grouping triangles
-        triasinDomain = [[id for id,tria in enumerate(trias) if tria[3]==domainNum] for domainNum in domains]
-        gridinDomain = [] # recording all nodes of domains, for determining neighborhood
-        for domainNum in domains:
-            temp = set()
-            for tria in trias:
-                if tria[3] == domainNum:
-                    temp.update(tria[:-1])
-            gridinDomain.append(temp)
-    except Exception as e:
-        print e
-        raise   
     try:  
         k = wavenumber # wavenumber
     except Exception as e:
         print e
-        raise         
-    try:
-        # qualifying mesh
-        edge_leng = [np.linalg.norm(np.array(grids[edge[0]])-np.array(grids[edge[1]])) for edge in edges] 
-        max_len = np.max(np.array(edge_leng))
-        if k*max_len < scipy.pi*2*0.2: print 'good mesh'
-        else: print 'poor mesh' 
-    except Exception as e:
-        print 'Skip', e,'-->> Edge'
-         
+        raise            
     try:
         ################################################################## 
         # generating HRWG and RWG
         rwgs = RWGFunc().match(grids, trias)
+        domains = [0,]
+        gridinDomain = [xrange(len(grids)),]
+        triasinDomain = [xrange(len(trias)),]
         return [k,grids,trias,rwgs,domains,gridinDomain,triasinDomain]
     except Exception as e:
         print e
@@ -222,8 +193,6 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             preCal(wavenumber, grids, trias, edges,segment)   
 
         plotGeo(grids,trias)
-        grids_temp = np.hstack( (grids[:,0:1], grids[:,2:3], np.zeros([grids.shape[0],1])) )
-        plotDomain(grids_temp,trias)
         
         details['Triangles'] = trias.shape[0]
         details['RWG'] = len(rwgs[1])
@@ -288,6 +257,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             details['f_e']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
             details['f_h']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
             pass
+        
         def solve(self, ind_inc_i_j):     
             try:    
                 incPar = IncidentPar()
@@ -295,10 +265,8 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 incPar.e_direct = self.e_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])#
                 filling_hander.changeIncDir(incPar)
                 rhdTerm = fillingProcess.fillingRHD_dgf_free(trias,rwgs,filling_hander)
-#                raise
             except Exception as e:
                 print e
-#                print incPar.e_direct
                 raise
 
             try:
@@ -327,12 +295,8 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 field_e = np.sum(field_e, axis=2)
                 field_e = np.multiply(field_e,np.conj(field_e))
                 aug = np.abs(field_e)*r**2*4*np.pi
-#                raise
             except Exception as e:
                 print e
-#                print field_e
-#                print incPar.e_direct
-#                print np.multiply(field_obs,incPar.e_direct)
                 raise              
             details['f_e'][ind_inc_i_j[0],ind_inc_i_j[1]] = aug[0,0]  
                    
@@ -342,10 +306,6 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 field_h = np.sum(field_h, axis=2)
                 field_h = np.multiply(field_h,np.conj(field_h))
                 aug = np.abs(field_h)*r**2*4*np.pi
-#                aug = np.log10(aug)*10        
-#                if ind_inc_i_j[1] == 18:
-#                    print aug
-#                    raise
             except Exception as e:
                 print e
                 raise                 

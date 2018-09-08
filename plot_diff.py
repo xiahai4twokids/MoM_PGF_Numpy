@@ -14,7 +14,7 @@ try:
     os.mkdir('tempData')
 except Exception as e:
     print e
-
+ 
 # In[]
 
 import pickle
@@ -23,7 +23,7 @@ import pickle
 from mom_solver import Solution
 from mom_solver import Parameters
 
-name = "butterfly"
+name = "plane"
 
 ID_sim_dir,details_sim_dir = Solution.simulator(filename=Parameters.Filename(name),\
                                                 solverPar=Parameters.SolverPar('dir_dgf_free'))
@@ -53,10 +53,11 @@ if 'theta'==rCSPar.whichPlan:
     plt.show()
     
     plt.plot(details_sim_dir['theta'][:,0],10*np.log10(\
-             details_sim_dir['f_e'][:,0]),label='e')
+             details_sim_dir['f_e'][:,0]\
+             /(np.sin(details_sim_dir['theta'][:,0]))**2),label='e')
     plt.legend(fontsize=14)
     plt.xlabel('$\theta$ degree',fontsize=14)
-    plt.ylabel('RCS dBsm',fontsize=14)
+    plt.ylabel('bi-RCS dBsm',fontsize=14)
     xlabel = np.linspace(0,np.pi,7)
     plt.xticks(xlabel,\
                np.array(xlabel*180/np.pi,dtype=float), \
@@ -92,3 +93,19 @@ else:
     plt.yticks(fontsize=12)
     plt.grid()
     plt.show()
+
+    plt.plot(details_sim_dir['phi'][0,::],10*np.log10(\
+             details_sim_dir['f_e'][0,:]\
+             /(np.sin(details_sim_dir['phi'][0,::]))**2),label = 'e')
+    plt.legend(fontsize=14)
+    plt.xlabel('$\phi$ degree',fontsize=14)
+    plt.ylabel('bi-RCS dBsm',fontsize=14)
+    xlabel = np.linspace(0,np.pi,7)
+    plt.xticks(xlabel,\
+               np.array(xlabel*180/np.pi,dtype=float), \
+               fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid()
+    plt.show()
+    pass
+
