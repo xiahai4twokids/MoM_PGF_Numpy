@@ -272,7 +272,8 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             try:
                 result1 = Solver().cgsSolve(matrix, rhdTerm) 
                 assert  result1[1] == 0
-                I_current = result1[0].reshape([-1,1])         
+                I_current = result1[0].reshape([-1,1])
+#                I_current = rhdTerm
             except Exception as e:
                 print e
                 raise 
@@ -283,7 +284,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             try:           
                 tempRCSPar = RCSPar_phi()
                 r = tempRCSPar.r
-                r_obs = incPar.k_direct*r
+                r_obs = -incPar.k_direct*r
                 r_obs = np.array(r_obs).reshape([1,1,-1])
                 field_obs = getFarFiled(r_obs, I_current, filling_hander, trias, rwgs) 
             except Exception as e:
