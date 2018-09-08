@@ -278,33 +278,33 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
         raise   
     
     # 定义一个内部函数，用来做循环
+    ############################
     class solving_kernel(object):
-        def __init__(self,k_dirs,h_dirs):
-            self.k_dirs = k_dirs
-            self.e_dirs = e_dirs
+        def __init__(self,k_dirs__,e_dirs__):
+            self.k_dirs = k_dirs__
+            self.e_dirs = e_dirs__
             details['rhd'] = dict()
             details['current'] = dict()
             details['f_e']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
             details['f_h']=np.zeros([self.k_dirs.shape[0],self.k_dirs.shape[1]])
             pass
         def solve(self, ind_inc_i_j):     
-#            print ind_inc_i_j
             try:    
                 incPar = IncidentPar()
                 incPar.k_direct = self.k_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])# 
                 incPar.e_direct = self.e_dirs[ind_inc_i_j[0],ind_inc_i_j[1]].reshape([-1,3])#
                 filling_hander.changeIncDir(incPar)
-#                print incPar.k_direct
-#                print incPar.e_direct
-                rhdTerm = fillingProcess.fillingRHD_dgf_free(trias,rwgs,filling_hander) 
+                rhdTerm = fillingProcess.fillingRHD_dgf_free(trias,rwgs,filling_hander)
+#                raise
             except Exception as e:
                 print e
+#                print incPar.e_direct
                 raise
 
             try:
                 result1 = Solver().cgsSolve(matrix, rhdTerm) 
                 assert  result1[1] == 0
-                I_current = result1[0].reshape([-1,1])
+                I_current = result1[0].reshape([-1,1])         
             except Exception as e:
                 print e
                 raise 
@@ -314,11 +314,10 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
             
             try:           
                 tempRCSPar = RCSPar_phi()
-                incPar = IncidentPar()
                 r = tempRCSPar.r
                 r_obs = incPar.k_direct*r
                 r_obs = np.array(r_obs).reshape([1,1,-1])
-                field_obs = getFarFiled(r_obs, I_current, filling_hander, trias, rwgs)                
+                field_obs = getFarFiled(r_obs, I_current, filling_hander, trias, rwgs) 
             except Exception as e:
                 print e
                 raise                            
@@ -328,9 +327,12 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 field_e = np.sum(field_e, axis=2)
                 field_e = np.multiply(field_e,np.conj(field_e))
                 aug = np.abs(field_e)*r**2*4*np.pi
-#                aug = np.log10(aug)*10           
+#                raise
             except Exception as e:
                 print e
+#                print field_e
+#                print incPar.e_direct
+#                print np.multiply(field_obs,incPar.e_direct)
                 raise              
             details['f_e'][ind_inc_i_j[0],ind_inc_i_j[1]] = aug[0,0]  
                    
@@ -341,11 +343,15 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 field_h = np.multiply(field_h,np.conj(field_h))
                 aug = np.abs(field_h)*r**2*4*np.pi
 #                aug = np.log10(aug)*10        
+#                if ind_inc_i_j[1] == 18:
+#                    print aug
+#                    raise
             except Exception as e:
                 print e
                 raise                 
             details['f_h'][ind_inc_i_j[0],ind_inc_i_j[1]]= aug[0,0]
             pass
+    #######################################
  
     print "solving equation"
     solving_start = datetime.datetime.now()
@@ -364,20 +370,26 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                            np.sin(thetas)*np.sin(phis),\
                            np.cos(thetas)*np.ones_like(phis)])\
                                 .transpose([1,2,0])
-        # TE 
+        
         v_dirs = np.array([-np.ones_like(thetas)*np.sin(phis),\
-                           np.ones_like(thetas)*np.cos(phis),\
-                           np.zeros([thetas.shape[0],phis.shape[1]])])\
-                                .transpose([1,2,0])
-        e_dirs = v_dirs
-#        # TM
-#        h_dirs = v_dirs
-#        e_dirs = np.cross(h_dirs,k_dirs)
+                               np.ones_like(thetas)*np.cos(phis),\
+                               np.zeros([thetas.shape[0],phis.shape[1]])])\
+                                    .transpose([1,2,0])
+        if "TE" == rCSPar.whichPol:
+            # TE            
+            e_dirs = v_dirs
+        else:
+            # TM
+            h_dirs = v_dirs
+            e_dirs = np.cross(h_dirs,k_dirs)
+
         solver = solving_kernel(k_dirs,e_dirs)
+#        raise
         map(solver.solve,\
             list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
     except Exception as e:
         print e
+#        print solver.e_dirs
         raise
         
     solving_end = datetime.datetime.now()

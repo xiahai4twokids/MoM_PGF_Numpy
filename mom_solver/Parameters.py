@@ -26,7 +26,8 @@ class SolverPar(object):
         
 class RCSPar(object):
     def __init__(self):
-        self.whichPlan = 'theta'
+        self.whichPlan = 'phi'
+        self.whichPol = 'TM'
 class RCSPar_theta(object):
     def __init__(self):
         self.theta_0 = np.linspace(0,180,37)*np.pi/180.
@@ -37,6 +38,7 @@ class RCSPar_phi(object):
     def __init__(self):
         self.theta_0 = np.array([90,])*np.pi/180.
         self.phi_0 = np.linspace(0,180,37)*np.pi/180.
+#        self.phi_0 = np.array([90,])*np.pi/180.
         self.r = 100.
         
 class WorkingFreqPar(object):

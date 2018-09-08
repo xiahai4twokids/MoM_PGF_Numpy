@@ -294,18 +294,28 @@ class FillingMatrix_dgf_free(object):
         try:
             
             # 分区三角形的节点
-            d2 = [[self.grids[self.trias[xx][0]], self.grids[self.trias[xx][1]], self.grids[self.trias[xx][2]]] for xx in triasinD2]
+            d2 = [[self.grids[self.trias[xx][0]], \
+                   self.grids[self.trias[xx][1]], \
+                   self.grids[self.trias[xx][2]]] \
+                  for xx in triasinD2]
             d2 = np.array(d2) # NofTria _3 _3
-            areas_d2 = [Triangle([]).area(temp_d2[0],temp_d2[1],temp_d2[2]) for temp_d2 in d2]
+            areas_d2 = [Triangle([]).area(temp_d2[0],temp_d2[1],temp_d2[2])\
+                        for temp_d2 in d2]
             areas_d2 = np.array(areas_d2) # NofTria
             
             # 收集高斯点          
             num2 = b_12.numPoint()
-            r2Group_12 = [b_12.point(d2[ii],ind) for ii,cell in enumerate(d2) for ind in xrange(num2)]
+            r2Group_12 = [b_12.point(d2[ii],ind) \
+                          for ii,cell in enumerate(d2) \
+                          for ind in xrange(num2)]
             r2Group_12 = np.array(r2Group_12)# NofTria*3
-            r2Group_12_find = [ii for ii,cell in enumerate(d2) for ind in xrange(num2)]
+            r2Group_12_find = [ii \
+                               for ii,cell in enumerate(d2) \
+                               for ind in xrange(num2)]
             r2Group_12_find = np.array(r2Group_12_find)# NofTria
-            w2Group_12 = [b_12.weight(areas_d2[ii],ind) for ii,cell in enumerate(d2) for ind in xrange(num2)]
+            w2Group_12 = [b_12.weight(areas_d2[ii],ind) \
+                          for ii,cell in enumerate(d2) \
+                          for ind in xrange(num2)]
             w2Group_12 = np.array(w2Group_12)# NofTria*3
            
             # 形成K矩阵
@@ -314,46 +324,57 @@ class FillingMatrix_dgf_free(object):
             r_1 = np.zeros([3,temp_obs.shape[0],r2Group_12.shape[0]])
             r_2 = np.zeros([3,temp_obs.shape[0],r2Group_12.shape[0]])
             for id_comp in xrange(3):
-                r_2[id_comp,:,:],r_1[id_comp,:,:] = np.meshgrid(r2Group_12[:,id_comp], temp_obs[:,id_comp])
+                r_2[id_comp,:,:],r_1[id_comp,:,:] \
+                    = np.meshgrid(r2Group_12[:,id_comp], temp_obs[:,id_comp])
                 
             r_vec = r_1-r_2
             r = np.sqrt(np.sum(r_vec*r_vec,axis=0))
             ejkr = scipy.exp(-1j*self.k*r)
-            C = 1./r**2*(1+1./(1j*self.k*r))
+            C = 1./r**2\
+                *(1+1./(1j*self.k*r))
             
             
             # 形成G矩阵
-            hrwginD2_p = [rwg['+'] for rwg in rwgs[1] if rwg['+'][3] in triasinD2]     # 找到所有hrwg
-            S_matrix_rowinD2_p = [ii for ii,rwg in enumerate(rwgs[1]) if rwg['+'][3] in triasinD2]
-            S_matrix_valuesinD2_p = [1.0 for rwg in rwgs[1] if rwg['+'][3] in triasinD2]
+            hrwginD2_p = [rwg['+'] \
+                          for rwg in rwgs[1] if rwg['+'][3] in triasinD2]     # 找到所有hrwg
+            S_matrix_rowinD2_p = [ii \
+                                  for ii,rwg in enumerate(rwgs[1]) if rwg['+'][3] in triasinD2]
+            S_matrix_valuesinD2_p = [1.0 \
+                                     for rwg in rwgs[1] if rwg['+'][3] in triasinD2]
+            hrwginD2_n = [rwg['-'] \
+                          for rwg in rwgs[1] if rwg['-'][3] in triasinD2]             
+            S_matrix_rowinD2_n = [ii \
+                                  for ii,rwg in enumerate(rwgs[1]) if rwg['-'][3] in triasinD2]
+            S_matrix_valuesinD2_n = [-1.0 \
+                                     for rwg in rwgs[1] if rwg['-'][3] in triasinD2]
             
-            S_matrix_rowinD2_n = [ii for ii,rwg in enumerate(rwgs[1]) if rwg['-'][3] in triasinD2]
-            S_matrix_valuesinD2_n = [-1.0 for rwg in rwgs[1] if rwg['-'][3] in triasinD2]
-            hrwginD2_n = [rwg['-'] for rwg in rwgs[1] if rwg['-'][3] in triasinD2] 
-            
-            hrwginD2 = hrwginD2_p+hrwginD2_n
-            S_matrix_rowinD2 = S_matrix_rowinD2_p+S_matrix_rowinD2_n
+            hrwginD2 = hrwginD2_p + hrwginD2_n
+            S_matrix_rowinD2 = S_matrix_rowinD2_p + S_matrix_rowinD2_n
             S_matrix_colinD2 = np.arange(len(hrwginD2))
-            S_matrix_valuesinD2 = S_matrix_valuesinD2_p+S_matrix_valuesinD2_n
-            
-            
-            S_matrixinD2 = coo_matrix((S_matrix_valuesinD2,(S_matrix_rowinD2, S_matrix_colinD2)),shape=[len(rwgs[1]),len(hrwginD2)])
+            S_matrix_valuesinD2 = S_matrix_valuesinD2_p + S_matrix_valuesinD2_n
+       
+            S_matrixinD2 = coo_matrix((S_matrix_valuesinD2,(S_matrix_rowinD2, S_matrix_colinD2)),\
+                                      shape=[len(rwgs[1]),len(hrwginD2)])
 
             Tria_Hrwg = np.array([ff[0] for ff in hrwginD2]) 
             
-            FreePoint_Hrwg = np.array([ff[0][ff[1]] for ff in hrwginD2]) # Hrwg*3 -- 所有hrwg的自由节点
-            Weight_Hrwg = np.array([ff[2] for ff in hrwginD2]).reshape([1,-1,1]) # Hrwg*3 -- 所有hrwg的权重
+            FreePoint_Hrwg = np.array([ff[0][ff[1]] \
+                                       for ff in hrwginD2]) # Hrwg*3 -- 所有hrwg的自由节点
+            Weight_Hrwg = np.array([ff[2] \
+                                    for ff in hrwginD2]).reshape([1,-1,1]) # Hrwg*3 -- 所有hrwg的权重
             
             r2Group_Hrwg = np.zeros([3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) # 3*Hrwg*r -- 积分点
             free_Hrwg = np.zeros([3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]])  # 3*Hrwg*r -- 所有hrwg的自由节点
             for id_comp in xrange(3): # 将其进行meshgrid
-                r2Group_Hrwg[id_comp,:,:],free_Hrwg[id_comp,:,:] = np.meshgrid(r2Group_12[:,id_comp], FreePoint_Hrwg[:,id_comp])
+                r2Group_Hrwg[id_comp,:,:],free_Hrwg[id_comp,:,:] \
+                    = np.meshgrid(r2Group_12[:,id_comp], FreePoint_Hrwg[:,id_comp])
             hrwgfunc = Weight_Hrwg*(r2Group_Hrwg - free_Hrwg) # 所有hrwg的取值
 
             temp_check_r_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) # 检查hrwg的合理值，去掉一些支撑集外面的非零值
             temp_check_hrwg_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) 
             for id_x,id_y in [(0,0),(0,1),(0,2),(1,0),(1,1),(1,2),(2,0),(2,1),(2,2)]:
-                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] = np.meshgrid(d2[r2Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
+                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] \
+                    = np.meshgrid(d2[r2Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
             temp_check = (temp_check_r_tria == temp_check_hrwg_tria) # 判断三角形是否一致
             check_matrix = (np.sum(np.sum(temp_check,axis=0),axis=0) == 9) # 只有三个点，九个数值都一样才表明是一个三角形
             temp2 = np.zeros(hrwgfunc.shape) # 过滤不合理的取值
@@ -362,13 +383,14 @@ class FillingMatrix_dgf_free(object):
             G1 = temp2[0]*w2Group_12
             G2 = temp2[1]*w2Group_12
             G3 = temp2[2]*w2Group_12
-
+            
             assert I_current.shape[1] == 1
             X = S_matrixinD2.T.dot(I_current)
             m1 = G1.T.dot(X)
             m2 = G2.T.dot(X)
             m3 = G3.T.dot(X)
             m = np.hstack((m1,m2,m3))
+            
 
             M = np.sum(r_vec.transpose([1,2,0])*m,axis=-1)*r_vec/r**2
             M = M.transpose([1,2,0])
@@ -378,13 +400,12 @@ class FillingMatrix_dgf_free(object):
             temp2C = 2*M.transpose([2,0,1])*C
             result = ((temp1Cx+temp2C)*ejkr).transpose([1,2,0])*self.aita/4/np.pi
             result = np.sum(result, axis=1)
-            
+#            raise
             return result.reshape([r_obs.shape[0],r_obs.shape[1],3])
         except Exception as e:
             print e
-#            print result.shape
-#            print r_obs.shape
-
+#            print m
+#            print result
             raise
         except AssertionError as ae:
             print ae
@@ -832,9 +853,10 @@ def getFarFiled(r_obs,  I_current, fillinghander, trias, rwgs):
     try:
 
         quadRule = QuadRule()
-        b_21 = quadRule.b_21
+        b_101 = quadRule.b_101
 
-        return fillinghander.fillField(r_obs, I_current, xrange(len(trias)), b_21,rwgs)
+        return fillinghander.fillField(r_obs, I_current, xrange(len(trias)), \
+                                       b_101,rwgs)
         pass
     except AssertionError as ae:
         print ae
