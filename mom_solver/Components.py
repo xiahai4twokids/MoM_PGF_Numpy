@@ -18,6 +18,7 @@ import pandas as pds
 
 # In[] Some common parameters
 from Parameters import QuadRule, IncidentPar
+from _myutils import Cubature
 
 # In[] RWG Func
 
@@ -99,7 +100,44 @@ class FillingMatrix_dgf_free(object):
         tempIncPar = IncidentPar()
         self.planewave = IncidentFunc(self.k, tempIncPar.k_direct, tempIncPar.e_direct).planewave
         self.aita = 377
+        self.common_Cal()
         pass
+    def common_Cal(self):
+        try:
+            self.d = [[self.grids[self.trias[xx][0]], self.grids[self.trias[xx][1]], self.grids[self.trias[xx][2]]] \
+                  for xx in xrange(len(self.trias))]
+            self.d = np.array(self.d) ## NofTria _3 _3
+            areas_d = [Triangle([]).area(temp_d[0],temp_d[1],temp_d[2]) for temp_d in self.d]
+            areas_d = np.array(areas_d)
+            
+            b_11 = Cubature(1,1) #out-interg
+            b_21 = Cubature(2,1) #Far
+            b_31 = Cubature(3,1) #Neighbor
+            b_41 = Cubature(4,1) #Same
+            self.r_quad = dict()
+            self.w_quad = dict()
+            
+            self.r_quad['b_11'] = np.array([[b_11.point(self.d[ii],ind) for ind in xrange(b_11.numPoint())]\
+                           for ii,cell in enumerate(self.d)])
+            self.r_quad['b_21'] = np.array([[b_21.point(self.d[ii],ind) for ind in xrange(b_21.numPoint())]\
+                           for ii,cell in enumerate(self.d)])
+            self.r_quad['b_31'] = np.array([[b_31.point(self.d[ii],ind) for ind in xrange(b_31.numPoint())]\
+                           for ii,cell in enumerate(self.d)])
+            self.r_quad['b_41'] = np.array([[b_41.point(self.d[ii],ind) for ind in xrange(b_41.numPoint())]\
+                           for ii,cell in enumerate(self.d)])
+            
+            self.w_quad['b_11'] = np.array([[b_11.weight(areas_d[ii],ind) for ind in xrange(b_11.numPoint())] \
+                       for ii,cell in enumerate(self.d) ])
+            self.w_quad['b_21'] = np.array([[b_21.weight(areas_d[ii],ind) for ind in xrange(b_21.numPoint())] \
+                       for ii,cell in enumerate(self.d) ])
+            self.w_quad['b_31'] = np.array([[b_31.weight(areas_d[ii],ind) for ind in xrange(b_31.numPoint())] \
+                       for ii,cell in enumerate(self.d) ])
+            self.w_quad['b_41'] = np.array([[b_41.weight(areas_d[ii],ind) for ind in xrange(b_41.numPoint())] \
+                       for ii,cell in enumerate(self.d) ])
+            pass
+        except Exception as e:
+            print e
+            raise
     
     def changeIncDir(self,incPar):
         tempIncPar = incPar
@@ -111,42 +149,48 @@ class FillingMatrix_dgf_free(object):
     def fillblock_dgf_free( self, triasinD1, triasinD2, b_101, b_12, rwgs):
         try:
             # 分区三角形的节点
-            d1 = [[self.grids[self.trias[xx][0]], self.grids[self.trias[xx][1]], self.grids[self.trias[xx][2]]] for xx in triasinD1]
-            d1 = np.array(d1) ## NofTria _3 _3
-            areas_d1 = [Triangle([]).area(temp_d1[0],temp_d1[1],temp_d1[2]) for temp_d1 in d1]
-            areas_d1 = np.array(areas_d1) # NofTria
-            d2 = [[self.grids[self.trias[xx][0]], self.grids[self.trias[xx][1]], self.grids[self.trias[xx][2]]] for xx in triasinD2]
-            d2 = np.array(d2) # NofTria _3 _3
-            areas_d2 = [Triangle([]).area(temp_d2[0],temp_d2[1],temp_d2[2]) for temp_d2 in d2]
-            areas_d2 = np.array(areas_d2) # NofTria
+            d1 = self.d[triasinD1,:]
+            d2 = self.d[triasinD2,:]
             
             # 收集高斯点
             num1 = b_101.numPoint()
-            r1Group_12 = [b_101.point(d1[ii],ind) for ii,cell in enumerate(d1) for ind in xrange(num1)]
-            r1Group_12 = np.array(r1Group_12) # NofTria*3
-            r1Group_12_find = [ii for ii,cell in enumerate(d1) for ind in xrange(num1)]
+            r1Group_12 = self.r_quad["b_%d%d"%(b_101.degree(),b_101.rule())]\
+                                     [triasinD1]
+            r1Group_12 = r1Group_12.reshape([-1,3])
+            w1Group_12 = self.w_quad["b_%d%d"%(b_101.degree(),b_101.rule())]\
+                                     [triasinD1]
+            w1Group_12 = w1Group_12.reshape([-1])
+            r1Group_12_find = [ii for ii,cell in enumerate(d1) \
+                               for ind in xrange(num1)]
             r1Group_12_find = np.array(r1Group_12_find) # NofTria
-            w1Group_12 = [b_101.weight(areas_d1[ii],ind) for ii,cell in enumerate(d1) for ind in xrange(num1)]
-            w1Group_12 = np.array(w1Group_12) # NofTria*3
             
             num2 = b_12.numPoint()
-            r2Group_12 = [b_12.point(d2[ii],ind) for ii,cell in enumerate(d2) for ind in xrange(num2)]
-            r2Group_12 = np.array(r2Group_12)# NofTria*3
-            r2Group_12_find = [ii for ii,cell in enumerate(d2) for ind in xrange(num2)]
+            r2Group_12 = self.r_quad["b_%d%d"%(b_12.degree(),b_12.rule())]\
+                                     [triasinD2]
+            r2Group_12 = r2Group_12.reshape([-1,3])            
+            w2Group_12 = self.w_quad["b_%d%d"%(b_12.degree(),b_12.rule())]\
+                                     [triasinD2]
+            w2Group_12 = w2Group_12.reshape([-1])
+            r2Group_12_find = [ii for ii,cell in enumerate(d2) \
+                               for ind in xrange(num2)]
             r2Group_12_find = np.array(r2Group_12_find)# NofTria
-            w2Group_12 = [b_12.weight(areas_d2[ii],ind) for ii,cell in enumerate(d2) for ind in xrange(num2)]
-            w2Group_12 = np.array(w2Group_12)# NofTria*3
            
             # 形成K矩阵
             K12 = [r1Group_12,r2Group_12]
 
             # 形成F矩阵
-            hrwginD1_p = [rwg['+'] for rwg in rwgs[1] if rwg['+'][3] in triasinD1]     # 找到所有hrwg
-            S_matrix_rowinD1_p = [ii for ii,rwg in enumerate(rwgs[1]) if rwg['+'][3] in triasinD1]
-            S_matrix_valuesinD1_p = [1.0 for rwg in rwgs[1] if rwg['+'][3] in triasinD1]            
-            hrwginD1_n = [rwg['-'] for rwg in rwgs[1] if rwg['-'][3] in triasinD1]
-            S_matrix_rowinD1_n = [ii for ii,rwg in enumerate(rwgs[1]) if rwg['-'][3] in triasinD1]
-            S_matrix_valuesinD1_n = [-1.0 for rwg in rwgs[1] if rwg['-'][3] in triasinD1]             
+            hrwginD1_p = [rwg['+'] for rwg in rwgs[1] \
+                          if rwg['+'][3] in triasinD1]     # 找到所有hrwg
+            S_matrix_rowinD1_p = [ii for ii,rwg in enumerate(rwgs[1]) \
+                                  if rwg['+'][3] in triasinD1]
+            S_matrix_valuesinD1_p = [1.0 for rwg in rwgs[1] \
+                                     if rwg['+'][3] in triasinD1]            
+            hrwginD1_n = [rwg['-'] for rwg in rwgs[1] \
+                          if rwg['-'][3] in triasinD1]
+            S_matrix_rowinD1_n = [ii for ii,rwg in enumerate(rwgs[1]) \
+                                  if rwg['-'][3] in triasinD1]
+            S_matrix_valuesinD1_n = [-1.0 for rwg in rwgs[1] \
+                                     if rwg['-'][3] in triasinD1]             
             hrwginD1 = hrwginD1_p+hrwginD1_n
             S_matrix_rowinD1 = S_matrix_rowinD1_p+S_matrix_rowinD1_n
             S_matrix_colinD1 = np.arange(len(hrwginD1))
@@ -228,6 +272,8 @@ class FillingMatrix_dgf_free(object):
             return [K12,(F1,F2,F3,F_div),(G1,G2,G3,G_div),(S_matrixinD1,S_matrixinD2)]
         except Exception as e:
             print e
+            print self.areas_d.shape
+            print triasinD1
             raise
         except AssertionError as ae:
             print ae
