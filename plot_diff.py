@@ -23,7 +23,7 @@ import pickle
 from mom_solver import Solution
 from mom_solver import Parameters
 
-name = "plane"
+name = "butterfly"
 
 ID_sim_dir,details_sim_dir = Solution.simulator(filename=Parameters.Filename(name),\
                                                 solverPar=Parameters.SolverPar('dir_dgf_free'))

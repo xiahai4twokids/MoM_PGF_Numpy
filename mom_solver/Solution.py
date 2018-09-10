@@ -133,19 +133,51 @@ def plotDomain(grids,trias):
         print e
         raise
                 
-def preCal(wavenumber, grids, trias, edges, segment):              
+def preCal(wavenumber, grids, trias, edges, segment):      
+    try:     
+        trias__,domainGrid, domainIDs  = autoDecomDomain(grids, trias, segment)
+        
+        if len(optDecomDomain_check(8, grids, trias__,domainGrid, domainIDs)) != 0:
+            optDecomDomain(8, grids, trias__,domainGrid, domainIDs)
+        
+        print "===="*30
+        trias = trias__
+        domains = np.unique(np.array(trias)[:,3])
+        
+        
+        # grouping triangles
+        triasinDomain = [[id for id,tria in enumerate(trias) if tria[3]==domainNum] for domainNum in domains]
+        gridinDomain = [] # recording all nodes of domains, for determining neighborhood
+        for domainNum in domains:
+            temp = set()
+            for tria in trias:
+                if tria[3] == domainNum:
+                    temp.update(tria[:-1])
+            gridinDomain.append(temp)
+    except Exception as e:
+        print e
+        raise           
     try:  
         k = wavenumber # wavenumber
     except Exception as e:
         print e
-        raise            
+        raise          
+        raise         
+    try:
+        # qualifying mesh
+        edge_leng = [np.linalg.norm(np.array(grids[edge[0]])-np.array(grids[edge[1]])) for edge in edges] 
+        max_len = np.max(np.array(edge_leng))
+        if k*max_len < scipy.pi*2*0.2: print 'good mesh'
+        else: print 'poor mesh' 
+    except Exception as e:
+        print 'Skip', e,'-->> Edge'
     try:
         ################################################################## 
         # generating HRWG and RWG
         rwgs = RWGFunc().match(grids, trias)
-        domains = [0,]
-        gridinDomain = [xrange(len(grids)),]
-        triasinDomain = [xrange(len(trias)),]
+#        domains = [0,]
+#        gridinDomain = [xrange(len(grids)),]
+#        triasinDomain = [xrange(len(trias)),]
         return [k,grids,trias,rwgs,domains,gridinDomain,triasinDomain]
     except Exception as e:
         print e

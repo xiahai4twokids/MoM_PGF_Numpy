@@ -13,12 +13,13 @@ import itertools
 #import pickle
 
 from scipy.sparse import coo_matrix
-from _myutils import Triangle
+#from _myutils import 
 import pandas as pds
+from multiprocessing import Pool
 
 # In[] Some common parameters
 from Parameters import QuadRule, IncidentPar
-from _myutils import Cubature
+from _myutils import Cubature, Triangle
 
 # In[] RWG Func
 
@@ -597,6 +598,9 @@ class ImpMatrix1(object):
             print e
             raise
 
+def run(cls_instance, var):
+    return cls_instance.kernel(var)
+
 class ImpMatrix2(ImpMatrix):
     def __init__(self, impMatrix):
         ImpMatrix.__init__(self,impMatrix)
@@ -652,28 +656,28 @@ class ImpMatrix2(ImpMatrix):
             print e
             raise
     
-    def matVec0_kernel(self,var):
-        try:
-            id_matrix = var['id_matrix']
-            matrix = var['matrix']
-            vector = var['vector']
-            FKGXs = var['FKGXs']
-            X = matrix[-1][1].T.dot(vector)
-            FKGXs[id_matrix,:] = matrix[-1][0].dot(self.FKGs[id_matrix].dot(X)).reshape([-1])
-            pass
-        except Exception as e:
-            print e
-            raise
     def matVec0(self,vector):
         try:            
             # FKGXs = []
             v_copy = vector.reshape([-1,1])
             assert v_copy.shape[-1] == 1
             FKGXs = np.zeros([len(self.impMatrix), vector.shape[0]],dtype=np.complex)
+            FKGs = self.FKGs
             # 遍历所有分块
-            vars = [{"id_matrix":id_matrix, "matrix":matrix, "vector":vector, "FKGXs":FKGXs}\
-                    for id_matrix, matrix in enumerate(self.impMatrix)]
-            map(self.matVec0_kernel,vars)
+            class temp0(object):
+                def __init__(self):
+                    pass
+                def kernel(self,var):
+                    id_matrix, matrix = var
+                    X = matrix[-1][1].T.dot(vector)
+                    FKGXs[id_matrix,:] = matrix[-1][0].dot(FKGs[id_matrix].dot(X)).reshape([-1])
+#            pool = Pool(3)
+#            for var in enumerate(self.impMatrix):
+#                pool.apply_async(run, (temp0, var))
+##            pool.map(temp0().kernel, enumerate(self.impMatrix))
+#            pool.close()
+#            pool.join()
+            map(temp0().kernel, enumerate(self.impMatrix))
             # 累加所有FKGXs,得到FKGXs_sum
             result = np.sum(FKGXs,axis=0)
             return result 
@@ -684,19 +688,7 @@ class ImpMatrix2(ImpMatrix):
         except Exception as e:
             print e
             raise
-
-    def rmatVec0_kernel(self,var):
-        try:
-            id_matrix = var['id_matrix']
-            matrix = var['matrix']
-            v_copy = var['v_copy']
-            GKFXs = var['GKFXs']
-            X = matrix[-1][0].T.dot(v_copy)
-            GKFXs[id_matrix,:] = matrix[-1][1].dot(self.FKGs[id_matrix].T.dot(X)).reshape([-1])
-            pass
-        except Exception as e:
-            print e
-            raise        
+   
     def rmatVec0(self,vector):
         try:
             # X = S_matrix.T.dot(vector)
@@ -704,10 +696,22 @@ class ImpMatrix2(ImpMatrix):
             assert v_copy.shape[-1] == 1
             # GKFXs = []
             GKFXs = np.zeros([len(self.impMatrix), vector.shape[0]],dtype=np.complex)
+            FKGs = self.FKGs
             # 遍历所有分块
-            vars = [{"id_matrix":id_matrix, "matrix":matrix, "v_copy":v_copy, "GKFXs":GKFXs}\
-                    for id_matrix, matrix in enumerate(self.impMatrix)]
-            map(self.rmatVec0_kernel,vars)
+            class temp0(self):
+                def __init__(self):
+                    pass
+                def kernel(self,var):
+                    id_matrix, matrix = var
+                    X = matrix[-1][0].T.dot(v_copy)
+                    GKFXs[id_matrix,:] = matrix[-1][1].dot(FKGs[id_matrix].T.dot(X)).reshape([-1])
+#            pool = Pool(3)
+#            for var in enumerate(self.impMatrix):
+#                pool.apply_async(run, (temp0, var))
+##            pool.map(temp0().kernel, enumerate(self.impMatrix))
+#            pool.close()
+#            pool.join()
+            map(temp0().kernel, enumerate(self.impMatrix))
             # 累加所有GKFXs,得到GKFXs_sum
             result = np.sum(GKFXs,axis=0)
             # return result 
