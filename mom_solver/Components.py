@@ -213,7 +213,8 @@ class FillingMatrix_dgf_free(object):
             temp_check_r_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r1Group_12.shape[0]]) # 检查hrwg的合理值，去掉一些支撑集外面的非零值
             temp_check_hrwg_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r1Group_12.shape[0]]) 
             for id_x,id_y in [(0,0),(0,1),(0,2),(1,0),(1,1),(1,2),(2,0),(2,1),(2,2)]:
-                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] = np.meshgrid(d1[r1Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
+                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] \
+                                 = np.meshgrid(d1[r1Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
             temp_check = (temp_check_r_tria == temp_check_hrwg_tria) # 判断三角形是否一致
             check_matrix = (np.sum(np.sum(temp_check,axis=0),axis=0) == 9) # 只有三个点，九个数值都一样才表明是一个三角形
             temp2 = np.zeros(hrwgfunc.shape) # 过滤不合理的取值
@@ -257,7 +258,8 @@ class FillingMatrix_dgf_free(object):
             temp_check_r_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) # 检查hrwg的合理值，去掉一些支撑集外面的非零值
             temp_check_hrwg_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) 
             for id_x,id_y in [(0,0),(0,1),(0,2),(1,0),(1,1),(1,2),(2,0),(2,1),(2,2)]:
-                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] = np.meshgrid(d2[r2Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
+                temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] \
+                                 = np.meshgrid(d2[r2Group_12_find][:,id_x,id_y], Tria_Hrwg[:,id_x,id_y])
             temp_check = (temp_check_r_tria == temp_check_hrwg_tria) # 判断三角形是否一致
             check_matrix = (np.sum(np.sum(temp_check,axis=0),axis=0) == 9) # 只有三个点，九个数值都一样才表明是一个三角形
             temp2 = np.zeros(hrwgfunc.shape) # 过滤不合理的取值
