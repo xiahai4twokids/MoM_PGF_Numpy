@@ -28,6 +28,7 @@ class RCSPar(object):
     def __init__(self):
         self.whichPlan = 'phi'
         self.whichPol = 'TE'
+        self.numthread = 2
 class RCSPar_theta(object):
     def __init__(self):
         self.theta_0 = np.linspace(0,180,37)*np.pi/180.

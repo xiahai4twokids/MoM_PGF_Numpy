@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 import pandas as pds
 import itertools
+from multiprocessing.dummy import Pool
 
 # defined packages
 from _domain_utils import autoDecomDomain, optDecomDomain,optDecomDomain_check
@@ -202,6 +203,9 @@ def loadMem(filenamePar):
         print e
         raise
 # In[]
+def run(cls_instance, var):
+    return cls_instance.solve(var)
+
 def simulator(filename=Filename(),solverPar=SolverPar()):
     try:
         sim_start = datetime.datetime.now()
@@ -378,8 +382,14 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
 
         solver = solving_kernel(k_dirs,e_dirs)
 #        raise
-        map(solver.solve,\
-            list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
+        pool = Pool(rCSPar.numthread)
+        for var in list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))):
+            pool.apply_async(run, (solver, var))
+        pool.close()
+        pool.join()
+            
+#        map(solver.solve,\
+#            list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
     except Exception as e:
         print e
 #        print solver.e_dirs

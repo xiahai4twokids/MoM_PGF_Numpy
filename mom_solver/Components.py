@@ -15,7 +15,7 @@ import itertools
 from scipy.sparse import coo_matrix
 #from _myutils import 
 import pandas as pds
-from multiprocessing import Pool
+from multiprocessing.dummy import Pool
 
 # In[] Some common parameters
 from Parameters import QuadRule, IncidentPar
@@ -671,9 +671,10 @@ class ImpMatrix2(ImpMatrix):
                     id_matrix, matrix = var
                     X = matrix[-1][1].T.dot(vector)
                     FKGXs[id_matrix,:] = matrix[-1][0].dot(FKGs[id_matrix].dot(X)).reshape([-1])
-#            pool = Pool(3)
+#            pool = Pool(2)
+#            temp1 = temp0()
 #            for var in enumerate(self.impMatrix):
-#                pool.apply_async(run, (temp0, var))
+#                pool.apply_async(run, (temp1, var))
 ##            pool.map(temp0().kernel, enumerate(self.impMatrix))
 #            pool.close()
 #            pool.join()
@@ -705,9 +706,10 @@ class ImpMatrix2(ImpMatrix):
                     id_matrix, matrix = var
                     X = matrix[-1][0].T.dot(v_copy)
                     GKFXs[id_matrix,:] = matrix[-1][1].dot(FKGs[id_matrix].T.dot(X)).reshape([-1])
-#            pool = Pool(3)
+#            pool = Pool(2)
+#            temp1 = temp0()
 #            for var in enumerate(self.impMatrix):
-#                pool.apply_async(run, (temp0, var))
+#                pool.apply_async(run, (temp1, var))
 ##            pool.map(temp0().kernel, enumerate(self.impMatrix))
 #            pool.close()
 #            pool.join()
@@ -738,14 +740,14 @@ class Solver(object): # https://docs.scipy.org/doc/scipy-0.16.0/reference/sparse
             raise
     def cgSolve(self,matrix,rhd): # cg迭代求解
         try:
-            result = scipy.sparse.linalg.cg(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.cg(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
             raise
     def bicgSolve(self,matrix,rhd): # bicg迭代求解
         try:
-            result = scipy.sparse.linalg.bicg(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.bicg(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
@@ -753,28 +755,28 @@ class Solver(object): # https://docs.scipy.org/doc/scipy-0.16.0/reference/sparse
 
     def bicgstabSolve(self,matrix,rhd): # bicgstab迭代求解
         try:
-            result = scipy.sparse.linalg.bicgstab(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.bicgstab(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
             raise
     def gmresSolve(self,matrix,rhd): # gmres迭代求解
         try:
-            result = scipy.sparse.linalg.gmres(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.gmres(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
             raise
     def minresSolve(self,matrix,rhd): # 最小余量法求解
         try:
-            result = scipy.sparse.linalg.minres(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.minres(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
             raise
     def cgsSolve(self,matrix,rhd): # cgs迭代求解
         try:
-            result = scipy.sparse.linalg.cgs(matrix, rhd, tol=1.e-8)
+            result = scipy.sparse.linalg.cgs(matrix, rhd, tol=1.e-10)
             return result
             pass
         except:
