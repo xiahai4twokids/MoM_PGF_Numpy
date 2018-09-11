@@ -144,8 +144,7 @@ def preCal(wavenumber, grids, trias, edges, segment):
         print "===="*30
         trias = trias__
         domains = np.unique(np.array(trias)[:,3])
-        
-        
+
         # grouping triangles
         triasinDomain = [[id for id,tria in enumerate(trias) if tria[3]==domainNum] for domainNum in domains]
         gridinDomain = [] # recording all nodes of domains, for determining neighborhood
@@ -176,9 +175,6 @@ def preCal(wavenumber, grids, trias, edges, segment):
         ################################################################## 
         # generating HRWG and RWG
         rwgs = RWGFunc().match(grids, trias)
-#        domains = [0,]
-#        gridinDomain = [xrange(len(grids)),]
-#        triasinDomain = [xrange(len(trias)),]
         return [k,grids,trias,rwgs,domains,gridinDomain,triasinDomain]
     except Exception as e:
         print e
@@ -203,7 +199,7 @@ def loadMem(filenamePar):
         print e
         raise
 # In[]
-def run(cls_instance, var):
+def run_solve(cls_instance, var):
     return cls_instance.solve(var)
 
 def simulator(filename=Filename(),solverPar=SolverPar()):
@@ -348,8 +344,7 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                 raise                 
             details['f_h'][ind_inc_i_j[0],ind_inc_i_j[1]]= aug[0,0]
             pass
-    #######################################
- 
+    ####################################### 
     print "solving equation"
     solving_start = datetime.datetime.now()
     solving_cpu_start = time.clock()
@@ -372,24 +367,19 @@ def simulator(filename=Filename(),solverPar=SolverPar()):
                                np.ones_like(thetas)*np.cos(phis),\
                                np.zeros([thetas.shape[0],phis.shape[1]])])\
                                     .transpose([1,2,0])
-        if "TE" == rCSPar.whichPol:
-            # TE            
+        if "TE" == rCSPar.whichPol:      # TE            
             e_dirs = v_dirs
-        else:
-            # TM
+        else:   # TM
             h_dirs = v_dirs
             e_dirs = np.cross(h_dirs,k_dirs)
 
         solver = solving_kernel(k_dirs,e_dirs)
-#        raise
         pool = Pool(rCSPar.numthread)
         for var in list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))):
-            pool.apply_async(run, (solver, var))
+            pool.apply_async(run_solve, (solver, var))
+#        pool.map(solver.solve, list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
         pool.close()
-        pool.join()
-            
-#        map(solver.solve,\
-#            list(itertools.product(xrange(thetas.shape[0]),xrange(phis.shape[1]))))
+        pool.join()   
     except Exception as e:
         print e
 #        print solver.e_dirs

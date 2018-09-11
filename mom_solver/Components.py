@@ -18,7 +18,7 @@ import pandas as pds
 from multiprocessing.dummy import Pool
 
 # In[] Some common parameters
-from Parameters import QuadRule, IncidentPar
+from Parameters import QuadRule, IncidentPar, SolverPar, CellPar
 from _myutils import Cubature, Triangle
 
 # In[] RWG Func
@@ -443,8 +443,6 @@ class FillingMatrix_dgf_free(object):
             temp_check_r_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) # 检查hrwg的合理值，去掉一些支撑集外面的非零值
             temp_check_hrwg_tria = np.zeros([3,3,FreePoint_Hrwg.shape[0],r2Group_12.shape[0]]) 
             class temp0(object):
-                def __init__(self):
-                    pass
                 def iter(self,id):
                     id_x,id_y = id
                     temp_check_r_tria[id_x,id_y,:,:], temp_check_hrwg_tria[id_x,id_y,:,:] \
@@ -476,12 +474,10 @@ class FillingMatrix_dgf_free(object):
             temp2C = 2*M.transpose([2,0,1])*C
             result = ((temp1Cx+temp2C)*ejkr).transpose([1,2,0])*self.aita/4/np.pi
             result = np.sum(result, axis=1)
-#            raise
+
             return result.reshape([r_obs.shape[0],r_obs.shape[1],3])
         except Exception as e:
             print e
-#            print m
-#            print result
             raise
         except AssertionError as ae:
             print ae
@@ -493,7 +489,6 @@ class ImpMatrix(object):
         self.impMatrix = impMatrix[0]
         self.coef = impMatrix[-1]
         pass
-
             
     def matVec(self,vector):
         return self.matVec0(vector)
@@ -665,19 +660,10 @@ class ImpMatrix2(ImpMatrix):
             FKGs = self.FKGs
             # 遍历所有分块
             class temp0(object):
-                def __init__(self):
-                    pass
                 def kernel(self,var):
                     id_matrix, matrix = var
                     X = matrix[-1][1].T.dot(vector)
                     FKGXs[id_matrix,:] = matrix[-1][0].dot(FKGs[id_matrix].dot(X)).reshape([-1])
-#            pool = Pool(2)
-#            temp1 = temp0()
-#            for var in enumerate(self.impMatrix):
-#                pool.apply_async(run, (temp1, var))
-##            pool.map(temp0().kernel, enumerate(self.impMatrix))
-#            pool.close()
-#            pool.join()
             map(temp0().kernel, enumerate(self.impMatrix))
             # 累加所有FKGXs,得到FKGXs_sum
             result = np.sum(FKGXs,axis=0)
@@ -700,19 +686,10 @@ class ImpMatrix2(ImpMatrix):
             FKGs = self.FKGs
             # 遍历所有分块
             class temp0(self):
-                def __init__(self):
-                    pass
                 def kernel(self,var):
                     id_matrix, matrix = var
                     X = matrix[-1][0].T.dot(v_copy)
                     GKFXs[id_matrix,:] = matrix[-1][1].dot(FKGs[id_matrix].T.dot(X)).reshape([-1])
-#            pool = Pool(2)
-#            temp1 = temp0()
-#            for var in enumerate(self.impMatrix):
-#                pool.apply_async(run, (temp1, var))
-##            pool.map(temp0().kernel, enumerate(self.impMatrix))
-#            pool.close()
-#            pool.join()
             map(temp0().kernel, enumerate(self.impMatrix))
             # 累加所有GKFXs,得到GKFXs_sum
             result = np.sum(GKFXs,axis=0)
@@ -729,6 +706,7 @@ class ImpMatrix2(ImpMatrix):
 
 class Solver(object): # https://docs.scipy.org/doc/scipy-0.16.0/reference/sparse.linalg.html 
     def __init__(self):
+        self.threshold = SolverPar().threshold
         pass
     def luSolve(self,matrix, rhd): # 直接求解
         try:
@@ -740,14 +718,14 @@ class Solver(object): # https://docs.scipy.org/doc/scipy-0.16.0/reference/sparse
             raise
     def cgSolve(self,matrix,rhd): # cg迭代求解
         try:
-            result = scipy.sparse.linalg.cg(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.cg(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
             raise
     def bicgSolve(self,matrix,rhd): # bicg迭代求解
         try:
-            result = scipy.sparse.linalg.bicg(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.bicg(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
@@ -755,28 +733,28 @@ class Solver(object): # https://docs.scipy.org/doc/scipy-0.16.0/reference/sparse
 
     def bicgstabSolve(self,matrix,rhd): # bicgstab迭代求解
         try:
-            result = scipy.sparse.linalg.bicgstab(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.bicgstab(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
             raise
     def gmresSolve(self,matrix,rhd): # gmres迭代求解
         try:
-            result = scipy.sparse.linalg.gmres(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.gmres(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
             raise
     def minresSolve(self,matrix,rhd): # 最小余量法求解
         try:
-            result = scipy.sparse.linalg.minres(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.minres(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
             raise
     def cgsSolve(self,matrix,rhd): # cgs迭代求解
         try:
-            result = scipy.sparse.linalg.cgs(matrix, rhd, tol=1.e-10)
+            result = scipy.sparse.linalg.cgs(matrix, rhd, tol=self.threshold)
             return result
             pass
         except:
@@ -812,23 +790,23 @@ class PGreenFunc(object):
                 
         ms,ns = np.meshgrid(m,n)
         rho_nm = [ns*self.d*np.cos(self.phi),\
-                  ms*self.h+ns*self.d*np.sin(self.phi),\
-                                            np.zeros_like(ms)]
+                  np.zeros_like(ms),\
+                  ms*self.h+ns*self.d*np.sin(self.phi)]
         rho_nm = np.array(rho_nm)
         rho_nm = rho_nm.transpose([1,2,0])
         
-        r = r1.reshape([1,-1,1,1,3])
-        rp = r2.reshape([-1,1,1,1,3])
+        r = r1.reshape([-1,1,1,1,3])
+        rp = r2.reshape([1,-1,1,1,3])
         
         r_rp_nm = r-rp-rho_nm
-        R_nm = np.sum(r_rp_nm*r_rp_nm,axis=-1)
+        R_nm = np.sqrt(np.sum(r_rp_nm*r_rp_nm,axis=-1))
         
         k0 = np.array([0,0,1]).reshape([1,-1])
         a = np.exp(-1.j*self.k*R_nm)/R_nm
               
         b = np.exp( -1.j*\
                      np.sum(k0*rho_nm,axis=-1)\
-                           )
+                  )
         
         c = a*b
         
@@ -867,8 +845,13 @@ class FillingProcess_DGF_Free(object):
                 tempZ = filling.fillblock_dgf_free(triasinDD[ii_index], triasinDD[jj_index], b_101, b_41, rwgs)
             else: # 两分区远离
                 tempZ = filling.fillblock_dgf_free(triasinDD[ii_index], triasinDD[jj_index], b_101, b_101, rwgs)
+                pass
+            
             r1Group_12,r2Group_12 = tempZ[0]
             K12 = GreenFunc(self.k)._ejkr_r(r1Group_12,r2Group_12)
+#            cellPar = CellPar()
+#            K12 = PGreenFunc(self.k, cellPar.d, cellPar.h, cellPar.phi, cellPar.nmax, cellPar.mmax)\
+#                    .pgf(r1Group_12,r2Group_12)
             assert(np.sum(np.isnan(K12))==0)
             result2 = [K12, \
                        tempZ[1],tempZ[2],tempZ[3]]
@@ -919,8 +902,6 @@ class FillingProcess_DGF_Free(object):
             # 设置高斯积分
             quadRule = QuadRule()
             b_21 = quadRule.b_21
-            
-#            filling =  FillingMatrix_dgf_free(GreenFunc(k),grids,trias)
             # 填充右端激励项
             rhdTerm = filling.fillRHD(xrange(len(trias)), b_21, rwgs) 
             return rhdTerm

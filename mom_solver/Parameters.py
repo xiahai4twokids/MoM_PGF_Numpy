@@ -23,12 +23,22 @@ class SolverPar(object):
     def __init__(self,matrix_solver_type = 'dir_dgf_free'):
         self.matrix_solver_type = matrix_solver_type
         self.aca_threshold = 1.e-4
+        self.threshold = 1.e-10
+
+class CellPar(object):
+    def __init__(self):
+        self.d = 2
+        self.h = 1
+        self.phi = np.pi*0
+        self.nmax = 80
+        self.mmax = 80
         
 class RCSPar(object):
     def __init__(self):
         self.whichPlan = 'phi'
         self.whichPol = 'TE'
         self.numthread = 2
+        
 class RCSPar_theta(object):
     def __init__(self):
         self.theta_0 = np.linspace(0,180,37)*np.pi/180.
